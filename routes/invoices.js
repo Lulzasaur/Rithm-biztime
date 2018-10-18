@@ -3,6 +3,9 @@ const router = new express.Router();
 const db = require('../db')
 
 //returns list of invoices
+//
+// => {invoices: [{code, name, description}, ... ]}
+
 router.get('/', async function(req, res, next){
     try{
         const results = await db.query(
@@ -68,16 +71,33 @@ router.post('/', async function(req,res,next){
     }
 })
 
-//edit a invoice
+//edit a invoice: takes {amt, paid} in req, returns {...}
 router.put('/:id', async function(req,res,next){
     try{
-        let { amt } = req.body,
+        let { amt, paid } = req.body, 
+            paid_date,
             id = req.params['id']
 
+        const paidOrNotRes = await db.query(
+            `SELECT paid, paid_date FROM invoices WHERE id = $1`,[id]
+        )
+
+        const {currPaid, currPaidDate} = paidOrNotRes.rows[0];
+
+        if(paid){
+            if(!currPaid){
+                paid_date = todayDate()
+            } else{
+                paid_date = currPaidDate
+            }
+        } else{
+            paid_date = null
+        }
+
         const results = await db.query(
-            `UPDATE invoices SET amt = $1
-            WHERE id = $2
-            RETURNING id, comp_code, amt, paid, add_date, paid_date`,[amt,id]);
+            `UPDATE invoices SET amt = $1, paid = $2, paid_date = $3
+            WHERE id = $4
+            RETURNING id, comp_code, amt, paid, add_date, paid_date`,[amt, paid, paid_date, id]);
 
         if(results.rows[0]){
             let returnInvoice = {'invoice':results.rows[0]}
@@ -98,7 +118,7 @@ router.put('/:id', async function(req,res,next){
 //delete a company
 router.delete('/:id', async function(req,res,next){
     try{
-        let id = req.params['id']
+        let id = req.params.id
 
         const results = await db.query(
             `DELETE FROM invoices WHERE id = $1 RETURNING id`,[id]);
@@ -117,5 +137,27 @@ router.delete('/:id', async function(req,res,next){
         return next(err);
     }
 })
+
+//provides today's date for invoice paying
+
+function todayDate(){
+    let today = new Date();
+    let dd = today.getDate();
+    let mm = today.getMonth()+1; //January is 0!
+    let yyyy = today.getFullYear();
+
+    if(dd<10) {
+        dd = '0'+dd
+    } 
+
+    if(mm<10) {
+        mm = '0'+mm
+    } 
+
+    today = mm + '/' + dd + '/' + yyyy;
+    
+    return today
+    
+}
 
 module.exports = router;

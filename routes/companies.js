@@ -28,11 +28,19 @@ router.get('/:code', async function(req, res, next) {
         
         const invoiceResults = await db.query(
             'SELECT id, comp_code, amt, paid, add_date, paid_date FROM invoices WHERE comp_code = $1',[code]);
-        
+       
+        const industryResults = await db.query(
+            `SELECT industries.industry FROM industries 
+            JOIN industry_company ON industries.id = industry_company.ind_code
+            JOIN companies ON industry_company.comp_code = companies.code
+            WHERE companies.code = $1`,[code]);
+
+            
         if(results.rows[0]){
 
             let returnComp = {company:results.rows[0]}
             returnComp.invoices = invoiceResults.rows
+            returnComp.industries = industryResults.rows
             return res.json(returnComp)
 
         } else {
@@ -51,7 +59,9 @@ router.get('/:code', async function(req, res, next) {
 //create a company
 router.post('/', async function(req,res,next){
     try{
-        let { code, name, description } = req.body;
+        let { name, description } = req.body;
+
+        let code = slugify(name,{lower:true});
 
         const results = await db.query(
             `INSERT INTO companies (code,name,description)
