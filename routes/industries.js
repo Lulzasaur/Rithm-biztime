@@ -55,18 +55,16 @@ router.get('/:ind', async function(req, res, next) {
 //create an industry
 router.post('/', async function(req,res,next){
     try{
-        let { name, description } = req.body;
-
-        let code = slugify(name,{lower:true});
+        let { industry } = req.body;
 
         const results = await db.query(
-            `INSERT INTO companies (code,name,description)
-            VALUES ($1, $2, $3)
-            RETURNING code,name,description`,[code,name,description]);
+            `INSERT INTO industries (industry)
+            VALUES ($1)
+            RETURNING industry`,[industry]);
         
-        let returnComp = {'company':results.rows[0]}
+        let returnInd = {'industry':results.rows[0]}
 
-        return res.json(returnComp)
+        return res.json(returnInd)
     }
 
     catch(err){
@@ -74,20 +72,21 @@ router.post('/', async function(req,res,next){
     }
 })
 
-//edit a company
-router.put('/:code', async function(req,res,next){
+
+//edit a industry
+router.put('/:ind', async function(req,res,next){
     try{
-        let { name, description } = req.body,
-            code = req.params['code']
+        let { industry } = req.body,
+            ind = req.params.ind;
 
         const results = await db.query(
-            `UPDATE companies SET name = $1, description = $2
-            WHERE code = $3
-            RETURNING code,name,description`,[name,description,code]);
+            `UPDATE industries SET industry = $1
+            WHERE industry = $2
+            RETURNING industry`,[industry,ind]);
 
         if(results.rows[0]){
-            let returnComp = {'company':results.rows[0]}
-            return res.json(returnComp)
+            let returnInd = {'industry':results.rows[0]}
+            return res.json(returnInd)
         } else{
             // res = Company.query.get_or_404
             let err = new Error('Company Not Found')
@@ -101,13 +100,13 @@ router.put('/:code', async function(req,res,next){
     }
 })
 
-//delete a company
-router.delete('/:code', async function(req,res,next){
+//delete an industry
+router.delete('/:ind', async function(req,res,next){
     try{
-        let code = req.params['code']
+        let ind = req.params.ind
 
         const results = await db.query(
-            `DELETE FROM companies WHERE code = $1 RETURNING code, name`,[code]);
+            `DELETE FROM industries WHERE industry = $1 RETURNING industry`,[ind]);
         
         if(results.rows[0]){
 
